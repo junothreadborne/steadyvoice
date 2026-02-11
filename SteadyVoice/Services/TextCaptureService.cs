@@ -3,7 +3,7 @@ using System.Text;
 using System.Windows;
 using System.Windows.Automation;
 
-namespace LocalTTS.Services;
+namespace SteadyVoice.Services;
 
 public static class TextCaptureService {
     [DllImport("user32.dll")]

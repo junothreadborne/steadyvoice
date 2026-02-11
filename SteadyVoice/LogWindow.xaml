@@ -1,7 +1,7 @@
-<Window x:Class="LocalTTS.LogWindow"
+<Window x:Class="SteadyVoice.LogWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="LocalTTS Log"
+        Title="SteadyVoice Log"
         Width="600" Height="400"
         WindowStartupLocation="CenterScreen">
     <Grid Margin="8">

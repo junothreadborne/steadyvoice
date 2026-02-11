@@ -1,4 +1,4 @@
-# LocalTTS
+# SteadyVoice
 
 A Windows system tray app that reads highlighted text aloud using [Kokoro TTS](https://github.com/remsky/Kokoro-FastAPI) running locally via Docker.
 
@@ -25,9 +25,9 @@ When Reader View is enabled, pressing **Ctrl+Shift+R** opens a clean reading win
 ## Setup
 
 ```
-git clone https://github.com/everybody-art/localtts.git
-cd localtts
-dotnet run --project LocalTTS
+git clone https://github.com/junothreadborne/steadyvoice.git
+cd steadyvoice
+dotnet run --project SteadyVoice
 ```
 
 On first launch the app will pull and start the Kokoro TTS Docker container. This may take a few minutes the first time. A tray icon will appear and show "Ready" when the TTS engine is available.
@@ -53,7 +53,7 @@ Right-click the tray icon → **Settings...** to configure:
 |---------|---------|-------------|
 | Docker Image | `ghcr.io/remsky/kokoro-fastapi-cpu:latest` | Use `ghcr.io/remsky/kokoro-fastapi-gpu:latest` for GPU acceleration |
 | Port | `8880` | Local port for the Kokoro API |
-| Container Name | `localtts-kokoro` | Docker container name |
+| Container Name | `steadyvoice-kokoro` | Docker container name |
 | Voice | `af_heart` | Kokoro voice ID (selectable list with preview) |
 | Log Level | Info | Minimum log level to record |
 | Auto-start container | On | Start the Docker container on app launch |
@@ -68,7 +68,7 @@ Settings are saved to `settings.json` next to the executable.
 
 ## Troubleshooting
 
-Right-click the tray icon → **View Log...** to see real-time log output. Logs are also written to `localtts.log` in the application's output directory.
+Right-click the tray icon → **View Log...** to see real-time log output. Logs are also written to `steadyvoice.log` in the application's output directory.
 
 Common issues:
 - **"Starting Kokoro..." stays forever**: Check that Docker Desktop is running and `docker ps` works from your terminal

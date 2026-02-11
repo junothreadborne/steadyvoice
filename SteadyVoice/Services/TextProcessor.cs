@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace LocalTTS.Services;
+namespace SteadyVoice.Services;
 
 public partial class TextProcessor {
     public static string Clean(string text) {

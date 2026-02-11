@@ -1,7 +1,7 @@
 using System.IO;
 using NAudio.Wave;
 
-namespace LocalTTS.Services;
+namespace SteadyVoice.Services;
 
 public sealed class AudioPlayerService : IDisposable {
     private WaveOutEvent? _waveOut;

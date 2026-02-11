@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocalTTS", "LocalTTS\LocalTTS.csproj", "{905CF5D1-4B06-4FE4-AC5D-5A42E29AA1C8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteadyVoice", "SteadyVoice\SteadyVoice.csproj", "{905CF5D1-4B06-4FE4-AC5D-5A42E29AA1C8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

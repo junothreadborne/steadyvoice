@@ -1,12 +1,12 @@
 using System.IO;
 
-namespace LocalTTS.Services;
+namespace SteadyVoice.Services;
 
 public enum LogLevel { Debug, Info, Warn, Error }
 
 public static class Log {
     private static readonly string LogPath = Path.Combine(
-        AppDomain.CurrentDomain.BaseDirectory, "localtts.log");
+        AppDomain.CurrentDomain.BaseDirectory, "steadyvoice.log");
 
     private static readonly object Lock = new();
 

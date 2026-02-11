@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 
-namespace LocalTTS.Services;
+namespace SteadyVoice.Services;
 
 public class HotkeyService {
     private const int HOTKEY_ID = 9000;
@@ -33,7 +33,7 @@ public class HotkeyService {
         _source?.AddHook(HwndHook);
 
         if (!RegisterHotKey(_windowHandle, HOTKEY_ID, MOD_CTRL | MOD_SHIFT, VK_R)) {
-            MessageBox.Show("Failed to register hotkey Ctrl+Shift+R. It may be in use by another application.", "LocalTTS");
+            MessageBox.Show("Failed to register hotkey Ctrl+Shift+R. It may be in use by another application.", "SteadyVoice");
         }
     }
 

@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace LocalTTS.Services;
+namespace SteadyVoice.Services;
 
 public static class CursorIndicator {
     private const uint OCR_APPSTARTING = 32650; // Arrow + hourglass

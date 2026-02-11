@@ -2,7 +2,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 
-namespace LocalTTS.Services;
+namespace SteadyVoice.Services;
 
 public record WordTimestamp(string Word, double StartTime, double EndTime);
 

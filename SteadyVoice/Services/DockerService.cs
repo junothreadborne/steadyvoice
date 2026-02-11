@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Net.Http;
 
-namespace LocalTTS.Services;
+namespace SteadyVoice.Services;
 
 public class DockerService(AppSettings settings) {
     private readonly AppSettings _settings = settings;

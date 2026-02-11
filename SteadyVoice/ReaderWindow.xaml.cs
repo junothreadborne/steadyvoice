@@ -4,10 +4,10 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using LocalTTS.Services;
+using SteadyVoice.Services;
 using System.Text;
 
-namespace LocalTTS;
+namespace SteadyVoice;
 
 public partial class ReaderWindow : Window {
     private const int MinFontSize = 10;

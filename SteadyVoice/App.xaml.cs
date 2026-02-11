@@ -1,8 +1,8 @@
 using System.Windows;
 using Hardcodet.Wpf.TaskbarNotification;
-using LocalTTS.Services;
+using SteadyVoice.Services;
 
-namespace LocalTTS;
+namespace SteadyVoice;
 
 public partial class App : Application {
     private TaskbarIcon? _trayIcon;
@@ -29,7 +29,7 @@ public partial class App : Application {
         _dockerService = new DockerService(_settings);
 
         _trayIcon = new TaskbarIcon {
-            ToolTipText = "LocalTTS - Starting...",
+            ToolTipText = "SteadyVoice - Starting...",
             MenuActivation = PopupActivationMode.RightClick,
             ContextMenu = CreateContextMenu()
         };
@@ -49,16 +49,16 @@ public partial class App : Application {
         _hotkeyService.HotkeyPressed += OnHotkeyPressed;
         _hotkeyService.Register();
 
-        _trayIcon.ToolTipText = "LocalTTS - Starting Kokoro...";
+        _trayIcon.ToolTipText = "SteadyVoice - Starting Kokoro...";
         try {
             await _dockerService.EnsureRunningAsync();
-            _trayIcon.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
-            _trayIcon.ShowBalloonTip("LocalTTS", "Ready! Highlight text and press Ctrl+Shift+R", BalloonIcon.Info);
+            _trayIcon.ToolTipText = "SteadyVoice - Ready (Ctrl+Shift+R)";
+            _trayIcon.ShowBalloonTip("SteadyVoice", "Ready! Highlight text and press Ctrl+Shift+R", BalloonIcon.Info);
             Log.Info("Startup complete - ready");
         } catch (Exception ex) {
             Log.Error("Docker startup failed", ex);
-            _trayIcon.ToolTipText = "LocalTTS - Docker error";
-            _trayIcon.ShowBalloonTip("LocalTTS", $"Docker error: {ex.Message}", BalloonIcon.Error);
+            _trayIcon.ToolTipText = "SteadyVoice - Docker error";
+            _trayIcon.ShowBalloonTip("SteadyVoice", $"Docker error: {ex.Message}", BalloonIcon.Error);
         }
     }
 
@@ -140,22 +140,22 @@ public partial class App : Application {
         try {
             var text = TextCaptureService.CaptureSelectedText();
             if (string.IsNullOrWhiteSpace(text)) {
-                _trayIcon?.ShowBalloonTip("LocalTTS", "No text selected", BalloonIcon.Warning);
+                _trayIcon?.ShowBalloonTip("SteadyVoice", "No text selected", BalloonIcon.Warning);
                 return;
             }
 
-            _trayIcon!.ToolTipText = "LocalTTS - Generating...";
+            _trayIcon!.ToolTipText = "SteadyVoice - Generating...";
             CursorIndicator.ShowBusy();
             var audioData = await _ttsService!.SynthesizeAsync(text, ct);
             CursorIndicator.Restore();
             _audioPlayer!.Play(audioData);
-            _trayIcon.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
+            _trayIcon.ToolTipText = "SteadyVoice - Ready (Ctrl+Shift+R)";
         } catch (OperationCanceledException) {
             CursorIndicator.Restore();
         } catch (Exception ex) {
             CursorIndicator.Restore();
-            _trayIcon?.ShowBalloonTip("LocalTTS", $"TTS error: {ex.Message}", BalloonIcon.Error);
-            _trayIcon!.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
+            _trayIcon?.ShowBalloonTip("SteadyVoice", $"TTS error: {ex.Message}", BalloonIcon.Error);
+            _trayIcon!.ToolTipText = "SteadyVoice - Ready (Ctrl+Shift+R)";
         }
     }
 
@@ -164,7 +164,7 @@ public partial class App : Application {
         var text = TextCaptureService.CaptureSelectedText();
         if (string.IsNullOrWhiteSpace(text)) {
             Log.Info("No text selected for reader");
-            _trayIcon?.ShowBalloonTip("LocalTTS", "No text selected", BalloonIcon.Warning);
+            _trayIcon?.ShowBalloonTip("SteadyVoice", "No text selected", BalloonIcon.Warning);
             return;
         }
 
@@ -208,7 +208,7 @@ public partial class App : Application {
         var ct = _ttsCts.Token;
 
         try {
-            _trayIcon!.ToolTipText = "LocalTTS - Generating...";
+            _trayIcon!.ToolTipText = "SteadyVoice - Generating...";
             CursorIndicator.ShowBusy();
 
             // Get audio with timestamps for highlighting
@@ -238,14 +238,14 @@ public partial class App : Application {
                     return adjusted > 0 ? adjusted : 0;
                 }, startWordIndex);
             }
-            _trayIcon.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
+            _trayIcon.ToolTipText = "SteadyVoice - Ready (Ctrl+Shift+R)";
         } catch (OperationCanceledException) {
             CursorIndicator.Restore();
         } catch (Exception ex) {
             CursorIndicator.Restore();
             Log.Error("TTS with highlighting failed", ex);
-            _trayIcon?.ShowBalloonTip("LocalTTS", $"TTS error: {ex.Message}", BalloonIcon.Error);
-            _trayIcon!.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
+            _trayIcon?.ShowBalloonTip("SteadyVoice", $"TTS error: {ex.Message}", BalloonIcon.Error);
+            _trayIcon!.ToolTipText = "SteadyVoice - Ready (Ctrl+Shift+R)";
         }
     }
 

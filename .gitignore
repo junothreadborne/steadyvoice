@@ -3,6 +3,6 @@ obj/
 .vs/
 *.user
 *.suo
-localtts.log
+steadyvoice.log
 nul
 tmpclaude-*

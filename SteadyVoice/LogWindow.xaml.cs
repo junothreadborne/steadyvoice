@@ -1,15 +1,15 @@
 using System.IO;
 using System.Windows;
-using LocalTTS.Services;
+using SteadyVoice.Services;
 
-namespace LocalTTS;
+namespace SteadyVoice;
 
 public partial class LogWindow : Window {
     public LogWindow() {
         InitializeComponent();
 
         // Load existing log file
-        var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "localtts.log");
+        var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "steadyvoice.log");
         try {
             if (File.Exists(logPath)) {
                 LogText.Text = File.ReadAllText(logPath);

@@ -4,9 +4,9 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
-using LocalTTS.Services;
+using SteadyVoice.Services;
 
-namespace LocalTTS;
+namespace SteadyVoice;
 
 public partial class SettingsWindow : Window {
     private readonly AppSettings _settings;
