@@ -1,0 +1,65 @@
+<Window x:Class="LocalTTS.ReaderWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Reader View"
+        Width="700" Height="500"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="False"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="{DynamicResource BackgroundBrush}">
+    <Window.Resources>
+        <!-- Light theme (default) -->
+        <SolidColorBrush x:Key="BackgroundBrush" Color="#FAFAFA"/>
+        <SolidColorBrush x:Key="TextBrush" Color="#1A1A1A"/>
+        <SolidColorBrush x:Key="ToolbarBrush" Color="#F0F0F0"/>
+        <SolidColorBrush x:Key="ButtonHoverBrush" Color="#E0E0E0"/>
+    </Window.Resources>
+
+    <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Toolbar (draggable) -->
+            <Border Grid.Row="0" Background="{DynamicResource ToolbarBrush}" Padding="8"
+                    MouseLeftButtonDown="OnToolbarMouseDown">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button x:Name="CloseButton" Content="✕" Width="32" Height="32"
+                            FontSize="14" Click="OnClose" ToolTip="Close (Esc)"
+                            Background="Transparent" BorderThickness="0"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="ReadAloudButton" Content="▶ Read Aloud"
+                            Padding="12,6" Margin="0,0,8,0" Click="OnReadAloud"/>
+
+                    <Separator Margin="8,4"/>
+
+                    <Button x:Name="FontDecreaseButton" Content="A-" Width="32" Height="32"
+                            Click="OnFontDecrease" ToolTip="Decrease font size"
+                            Background="Transparent" BorderThickness="0"/>
+                    <TextBlock x:Name="FontSizeDisplay" Text="18" VerticalAlignment="Center"
+                               Margin="4,0" MinWidth="24" TextAlignment="Center"/>
+                    <Button x:Name="FontIncreaseButton" Content="A+" Width="32" Height="32"
+                            Click="OnFontIncrease" ToolTip="Increase font size"
+                            Background="Transparent" BorderThickness="0"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Content -->
+        <FlowDocumentScrollViewer Grid.Row="1" x:Name="DocumentViewer"
+                                   VerticalScrollBarVisibility="Auto"
+                                   IsToolBarVisible="False">
+            <FlowDocument x:Name="Document"
+                          PagePadding="40,20"
+                          Foreground="{DynamicResource TextBrush}">
+            </FlowDocument>
+            </FlowDocumentScrollViewer>
+        </Grid>
+    </Border>
+</Window>

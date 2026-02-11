@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(dir:*)",
+      "Bash(dotnet new:*)",
+      "Bash(dotnet sln:*)",
+      "Bash(dotnet add package:*)",
+      "Bash(dotnet add:*)",
+      "Bash(del D:everybody-artlocalttsLocalTTSMainWindow.xaml D:everybody-artlocalttsLocalTTSMainWindow.xaml.cs)",
+      "Bash(dotnet build:*)",
+      "Bash(git init:*)",
+      "Bash(git remote add:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: LocalTTS system tray TTS app\n\nWPF system tray app that captures highlighted text via global hotkey\n\\(Ctrl+Shift+R\\), sends it to Kokoro-FastAPI running in Docker, and\nplays back the synthesized speech via NAudio.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd README\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(gh pr create --title \"Add settings, log viewer, and GPU support\" --body \"$\\(cat <<''EOF''\n## Summary\n- **Settings window** accessible from tray menu with Docker image, port, container name, voice, and auto-start/stop toggles\n- **Real-time log viewer** window accessible from tray menu\n- **GPU support**: auto-detects GPU image name and passes `--gpus all` to `docker run`\n- Settings persisted to `settings.json` next to the executable\n- Updated README with settings table and troubleshooting info\n\n## Test plan\n- [ ] Right-click tray icon → Settings → verify defaults are populated\n- [ ] Change voice, save, trigger TTS → confirm new voice is used\n- [ ] Change Docker image to GPU variant, restart → confirm `--gpus all` is passed\n- [ ] Right-click tray icon → View Log → confirm real-time log output\n- [ ] Close and reopen app → confirm settings are persisted\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\nEOF\n\\)\")"
+    ]
+  }
+}
