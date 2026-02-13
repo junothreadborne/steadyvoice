@@ -14,4 +14,8 @@
     <PackageReference Include="NAudio" Version="2.2.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SteadyVoice.Core\SteadyVoice.Core.csproj" />
+  </ItemGroup>
+
 </Project>
