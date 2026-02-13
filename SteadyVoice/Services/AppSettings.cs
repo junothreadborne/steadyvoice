@@ -4,11 +4,7 @@ using System.Text.Json;
 namespace SteadyVoice.Services;
 
 public class AppSettings {
-    public string DockerImage { get; set; } = "ghcr.io/remsky/kokoro-fastapi-cpu:latest";
-    public int Port { get; set; } = 8880;
-    public string ContainerName { get; set; } = "steadyvoice-kokoro";
-    public bool AutoStartContainer { get; set; } = true;
-    public bool AutoStopContainer { get; set; } = true;
+    public string ApiUrl { get; set; } = "http://localhost:8880";
     public string Voice { get; set; } = "af_heart";
 
     // Reader View settings

@@ -29,7 +29,7 @@ public sealed class TtsService(AppSettings settings) : IDisposable {
             var json = JsonSerializer.Serialize(payload);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var url = $"http://localhost:{_settings.Port}/v1/audio/speech";
+            var url = $"{_settings.ApiUrl.TrimEnd('/')}/v1/audio/speech";
             var response = await _client.PostAsync(url, content, ct);
             response.EnsureSuccessStatusCode();
 
@@ -50,7 +50,7 @@ public sealed class TtsService(AppSettings settings) : IDisposable {
             var json = JsonSerializer.Serialize(payload);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var url = $"http://localhost:{_settings.Port}/dev/captioned_speech";
+            var url = $"{_settings.ApiUrl.TrimEnd('/')}/dev/captioned_speech";
             var response = await _client.PostAsync(url, content, ct);
             response.EnsureSuccessStatusCode();
 

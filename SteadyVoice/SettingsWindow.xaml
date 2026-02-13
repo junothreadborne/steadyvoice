@@ -8,15 +8,11 @@
         ResizeMode="NoResize">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="16">
-            <!-- Docker Settings -->
-            <TextBlock Text="Docker Settings" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,12"/>
+            <!-- API Settings -->
+            <TextBlock Text="API Settings" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,12"/>
 
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
@@ -25,17 +21,11 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="Docker Image:" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                <TextBox Grid.Row="0" Grid.Column="1" x:Name="DockerImageBox" Margin="0,0,0,8"/>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="API URL:" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                <TextBox Grid.Row="0" Grid.Column="1" x:Name="ApiUrlBox" Margin="0,0,0,8"/>
 
-                <TextBlock Grid.Row="1" Grid.Column="0" Text="Port:" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                <TextBox Grid.Row="1" Grid.Column="1" x:Name="PortBox" Margin="0,0,0,8" Width="80" HorizontalAlignment="Left"/>
-
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="Container Name:" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                <TextBox Grid.Row="2" Grid.Column="1" x:Name="ContainerNameBox" Margin="0,0,0,8"/>
-
-                <TextBlock Grid.Row="3" Grid.Column="0" Text="Voice:" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                <Grid Grid.Row="3"
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Voice:" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                <Grid Grid.Row="1"
                         Grid.Column="1"
                         Margin="0,0,0,8">
                     <Grid.ColumnDefinitions>
@@ -55,12 +45,6 @@
                             Padding="10,2"
                             Click="OnPreviewVoice"/>
                 </Grid>
-
-                <CheckBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" x:Name="AutoStartBox"
-                          Content="Auto-start container on launch" Margin="0,0,0,8"/>
-
-                <CheckBox Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" x:Name="AutoStopBox"
-                          Content="Auto-stop container on exit" Margin="0,0,0,8"/>
             </Grid>
 
             <!-- Reader View Settings -->

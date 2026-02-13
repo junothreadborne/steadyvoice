@@ -9,14 +9,13 @@ public partial class App : Application {
     private HotkeyService? _hotkeyService;
     private AudioPlayerService? _audioPlayer;
     private TtsService? _ttsService;
-    private DockerService? _dockerService;
     private AppSettings _settings = new();
     private CancellationTokenSource? _ttsCts;
 
     // Reader View state
     private ReaderWindow? _readerWindow;
 
-    protected override async void OnStartup(StartupEventArgs e) {
+    protected override void OnStartup(StartupEventArgs e) {
         base.OnStartup(e);
         Log.Info("App starting...");
 
@@ -26,10 +25,9 @@ public partial class App : Application {
         _audioPlayer = new AudioPlayerService();
         _audioPlayer.PlaybackStopped += OnPlaybackStopped;
         _ttsService = new TtsService(_settings);
-        _dockerService = new DockerService(_settings);
 
         _trayIcon = new TaskbarIcon {
-            ToolTipText = "SteadyVoice - Starting...",
+            ToolTipText = "SteadyVoice - Ready (Ctrl+Shift+R)",
             MenuActivation = PopupActivationMode.RightClick,
             ContextMenu = CreateContextMenu()
         };
@@ -49,17 +47,8 @@ public partial class App : Application {
         _hotkeyService.HotkeyPressed += OnHotkeyPressed;
         _hotkeyService.Register();
 
-        _trayIcon.ToolTipText = "SteadyVoice - Starting Kokoro...";
-        try {
-            await _dockerService.EnsureRunningAsync();
-            _trayIcon.ToolTipText = "SteadyVoice - Ready (Ctrl+Shift+R)";
-            _trayIcon.ShowBalloonTip("SteadyVoice", "Ready! Highlight text and press Ctrl+Shift+R", BalloonIcon.Info);
-            Log.Info("Startup complete - ready");
-        } catch (Exception ex) {
-            Log.Error("Docker startup failed", ex);
-            _trayIcon.ToolTipText = "SteadyVoice - Docker error";
-            _trayIcon.ShowBalloonTip("SteadyVoice", $"Docker error: {ex.Message}", BalloonIcon.Error);
-        }
+        _trayIcon.ShowBalloonTip("SteadyVoice", "Ready! Highlight text and press Ctrl+Shift+R", BalloonIcon.Info);
+        Log.Info("Startup complete - ready");
     }
 
     private System.Windows.Controls.ContextMenu CreateContextMenu() {
@@ -101,7 +90,6 @@ public partial class App : Application {
         var window = new SettingsWindow(_settings);
         if (window.ShowDialog() == true) {
             _ttsService = new TtsService(_settings);
-            _dockerService = new DockerService(_settings);
             ApplyLogLevel();
             Log.Info("Settings updated");
         }
@@ -249,15 +237,11 @@ public partial class App : Application {
         }
     }
 
-    protected override async void OnExit(ExitEventArgs e) {
+    protected override void OnExit(ExitEventArgs e) {
         _ttsCts?.Cancel();
         _hotkeyService?.Unregister();
         _audioPlayer?.Stop();
         _trayIcon?.Dispose();
-
-        if (_dockerService != null) {
-            try { await _dockerService.StopAsync(); } catch { }
-        }
 
         base.OnExit(e);
     }

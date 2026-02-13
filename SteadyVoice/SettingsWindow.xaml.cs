@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using SteadyVoice.Services;
+using System;
 
 namespace SteadyVoice;
 
@@ -23,13 +24,9 @@ public partial class SettingsWindow : Window {
         Loaded += OnLoaded;
         Closed += OnClosed;
 
-        // Docker settings
-        DockerImageBox.Text = settings.DockerImage;
-        PortBox.Text = settings.Port.ToString(CultureInfo.InvariantCulture);
-        ContainerNameBox.Text = settings.ContainerName;
+        // API settings
+        ApiUrlBox.Text = settings.ApiUrl;
         VoiceComboBox.Text = settings.Voice;
-        AutoStartBox.IsChecked = settings.AutoStartContainer;
-        AutoStopBox.IsChecked = settings.AutoStopContainer;
 
         // Reader View settings
         ShowReaderWindowBox.IsChecked = settings.ShowReaderWindow;
@@ -62,8 +59,9 @@ public partial class SettingsWindow : Window {
     }
 
     private void OnSave(object sender, RoutedEventArgs e) {
-        if (!int.TryParse(PortBox.Text, out var port) || port < 1 || port > 65535) {
-            MessageBox.Show("Port must be a number between 1 and 65535.", "Invalid Port",
+        var apiUrl = ApiUrlBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(apiUrl) || !Uri.TryCreate(apiUrl, UriKind.Absolute, out _)) {
+            MessageBox.Show("Please enter a valid API URL.", "Invalid URL",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -74,13 +72,9 @@ public partial class SettingsWindow : Window {
             return;
         }
 
-        // Docker settings
-        _settings.DockerImage = DockerImageBox.Text.Trim();
-        _settings.Port = port;
-        _settings.ContainerName = ContainerNameBox.Text.Trim();
+        // API settings
+        _settings.ApiUrl = apiUrl;
         _settings.Voice = VoiceComboBox.Text.Trim();
-        _settings.AutoStartContainer = AutoStartBox.IsChecked == true;
-        _settings.AutoStopContainer = AutoStopBox.IsChecked == true;
 
         // Reader View settings
         _settings.ShowReaderWindow = ShowReaderWindowBox.IsChecked == true;
@@ -115,8 +109,9 @@ public partial class SettingsWindow : Window {
         var currentVoice = VoiceComboBox.Text.Trim();
         var voices = new List<string>();
 
-        if (int.TryParse(PortBox.Text, out var port) && port is >= 1 and <= 65535) {
-            voices = await TryFetchVoicesAsync(port);
+        var apiUrl = ApiUrlBox.Text.Trim();
+        if (!string.IsNullOrWhiteSpace(apiUrl) && Uri.TryCreate(apiUrl, UriKind.Absolute, out _)) {
+            voices = await TryFetchVoicesAsync(apiUrl);
         }
 
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -154,10 +149,11 @@ public partial class SettingsWindow : Window {
         }
     }
 
-    private static async Task<List<string>> TryFetchVoicesAsync(int port) {
+    private static async Task<List<string>> TryFetchVoicesAsync(string apiUrl) {
+        var baseUrl = apiUrl.TrimEnd('/');
         var endpoints = new[] {
-            $"http://localhost:{port}/v1/audio/voices",
-            $"http://localhost:{port}/v1/voices"
+            $"{baseUrl}/v1/audio/voices",
+            $"{baseUrl}/v1/voices"
         };
 
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
@@ -250,8 +246,9 @@ public partial class SettingsWindow : Window {
             return;
         }
 
-        if (!int.TryParse(PortBox.Text, out var port) || port < 1 || port > 65535) {
-            MessageBox.Show("Port must be a number between 1 and 65535.", "Invalid Port",
+        var apiUrl = ApiUrlBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(apiUrl) || !Uri.TryCreate(apiUrl, UriKind.Absolute, out _)) {
+            MessageBox.Show("Please enter a valid API URL.", "Invalid URL",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -265,7 +262,7 @@ public partial class SettingsWindow : Window {
             _previewCts = new CancellationTokenSource();
 
             var previewSettings = new AppSettings {
-                Port = port,
+                ApiUrl = apiUrl,
                 Voice = voice
             };
 
