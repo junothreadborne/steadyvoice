@@ -51,18 +51,15 @@ Right-click the tray icon → **Settings...** to configure:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| Docker Image | `ghcr.io/remsky/kokoro-fastapi-cpu:latest` | Use `ghcr.io/remsky/kokoro-fastapi-gpu:latest` for GPU acceleration |
-| Port | `8880` | Local port for the Kokoro API |
-| Container Name | `steadyvoice-kokoro` | Docker container name |
+| API URL | `http://localhost:8880` | URL of the Kokoro TTS API |
 | Voice | `af_heart` | Kokoro voice ID (selectable list with preview) |
-| Log Level | Info | Minimum log level to record |
-| Auto-start container | On | Start the Docker container on app launch |
-| Auto-stop container | On | Stop the Docker container on app exit |
 | Enable Reader View | On | Show reader window on hotkey (when off, hotkey plays audio only) |
 | Reader Auto-play | On | Auto-play TTS when reader opens |
+| Reader Close on Focus Loss | Off | Close reader window when it loses focus |
 | Reader Dark Mode | Off | Use dark theme for reader window |
 | Reader Font | Segoe UI | Font family for reader text |
 | Reader Font Size | 18 | Font size for reader text (10-36) |
+| Log Level | Info | Minimum log level to record |
 
 Settings are saved to `settings.json` next to the executable.
 
