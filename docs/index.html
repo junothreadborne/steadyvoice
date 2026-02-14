@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SteadyVoice — Read Any Text Aloud, Instantly</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0d1117;
+    --bg-surface: #161b22;
+    --bg-card: #1c2129;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --accent-glow: rgba(88, 166, 255, 0.15);
+    --kbd-bg: #282e36;
+    --kbd-border: #444c56;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #ffffff;
+      --bg-surface: #f6f8fa;
+      --bg-card: #ffffff;
+      --border: #d0d7de;
+      --text: #1f2328;
+      --text-muted: #656d76;
+      --accent: #0969da;
+      --accent-glow: rgba(9, 105, 218, 0.1);
+      --kbd-bg: #f0f2f4;
+      --kbd-border: #d0d7de;
+    }
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ---- Layout ---- */
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  section { padding: 4rem 0; }
+
+  /* ---- Hero ---- */
+  .hero {
+    text-align: center;
+    padding: 6rem 0 4rem;
+  }
+
+  .hero h1 {
+    font-size: 2.8rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 1rem;
+  }
+
+  .hero .tagline {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    max-width: 520px;
+    margin: 0 auto 2.5rem;
+  }
+
+  .hotkey-visual {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  kbd {
+    display: inline-block;
+    padding: 0.3rem 0.6rem;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: var(--kbd-bg);
+    border: 1px solid var(--kbd-border);
+    border-radius: 6px;
+    box-shadow: inset 0 -1px 0 var(--kbd-border);
+    line-height: 1;
+  }
+
+  .hotkey-plus {
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 0.85rem;
+  }
+
+  /* ---- Steps ---- */
+  .steps {
+    border-top: 1px solid var(--border);
+  }
+
+  .steps h2 {
+    text-align: center;
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin-bottom: 2.5rem;
+  }
+
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+
+  .step {
+    text-align: center;
+    padding: 1.5rem;
+  }
+
+  .step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: var(--accent-glow);
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .step h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .step p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+  }
+
+  /* ---- Features ---- */
+  .features {
+    border-top: 1px solid var(--border);
+  }
+
+  .features h2 {
+    text-align: center;
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin-bottom: 2.5rem;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+
+  .feature-card {
+    padding: 1.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .feature-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .feature-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+  }
+
+  .feature-card p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  /* ---- Getting Started ---- */
+  .getting-started {
+    border-top: 1px solid var(--border);
+  }
+
+  .getting-started h2 {
+    text-align: center;
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin-bottom: 2.5rem;
+  }
+
+  .prereqs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .prereq {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+
+  .prereq strong {
+    color: var(--text);
+  }
+
+  .code-block {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    overflow-x: auto;
+  }
+
+  .code-block pre {
+    font-family: "Cascadia Code", "Fira Code", "JetBrains Mono", "Consolas", monospace;
+    font-size: 0.875rem;
+    line-height: 1.7;
+  }
+
+  .code-block .comment { color: var(--text-muted); }
+  .code-block .cmd { color: var(--text); }
+
+  /* ---- Footer ---- */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem 0;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+
+  footer a { color: var(--text-muted); }
+  footer a:hover { color: var(--accent); }
+
+  .footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  /* ---- Responsive ---- */
+  @media (max-width: 640px) {
+    .hero { padding: 4rem 0 3rem; }
+    .hero h1 { font-size: 2rem; }
+    .hero .tagline { font-size: 1.05rem; }
+    .steps-grid { grid-template-columns: 1fr; gap: 1rem; }
+    .features-grid { grid-template-columns: 1fr; }
+    section { padding: 3rem 0; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <h1>SteadyVoice</h1>
+      <p class="tagline">
+        A Windows system tray app that reads any highlighted text aloud using
+        high-quality local TTS.
+      </p>
+      <div class="hotkey-visual">
+        <kbd>Ctrl</kbd>
+        <span class="hotkey-plus">+</span>
+        <kbd>Shift</kbd>
+        <span class="hotkey-plus">+</span>
+        <kbd>R</kbd>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="steps">
+    <div class="container">
+      <h2>How It Works</h2>
+      <div class="steps-grid">
+        <div class="step">
+          <div class="step-number">1</div>
+          <h3>Highlight Text</h3>
+          <p>Select text in any application &mdash; browser, editor, PDF reader, anything.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <h3>Press the Hotkey</h3>
+          <p>Hit <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> from anywhere on your desktop.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <h3>Listen</h3>
+          <p>Audio streams back instantly with a reader window highlighting each word in sync.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features">
+    <div class="container">
+      <h2>Features</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <h3>Word-by-Word Highlighting</h3>
+          <p>Follow along in a reader window that highlights each word as it's spoken, synced to audio timestamps.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Streaming Playback</h3>
+          <p>Audio starts playing as soon as the first chunk arrives &mdash; no waiting for the full response.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Fully Local</h3>
+          <p>Runs against a local Kokoro TTS instance. Your text never leaves your machine.</p>
+        </div>
+        <div class="feature-card">
+          <h3>System Tray Convenience</h3>
+          <p>Lives quietly in the system tray. Configure voice, API URL, and appearance from the tray menu.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Getting Started -->
+  <section class="getting-started">
+    <div class="container">
+      <h2>Getting Started</h2>
+      <div class="prereqs">
+        <div class="prereq"><strong>.NET 10</strong> SDK</div>
+        <div class="prereq"><strong>Kokoro TTS</strong> API running locally</div>
+        <div class="prereq"><strong>Windows</strong> 10+</div>
+      </div>
+      <div class="code-block">
+        <pre><span class="comment"># Clone the repo</span>
+<span class="cmd">git clone https://github.com/junothreadborne/steadyvoice.git
+cd steadyvoice</span>
+
+<span class="comment"># Build and run</span>
+<span class="cmd">dotnet run --project src/SteadyVoice</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-links">
+        <a href="https://github.com/junothreadborne/steadyvoice">GitHub</a>
+        <a href="https://github.com/junothreadborne/steadyvoice/issues">Issues</a>
+      </div>
+      <p>MIT License</p>
+    </div>
+  </footer>
+
+</body>
+</html>
