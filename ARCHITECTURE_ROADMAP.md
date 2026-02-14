@@ -344,8 +344,8 @@ Those can be added later via new CaptureProfiles or extended Normalization layer
 
 # Migration Plan (Incremental)
 
-1. Introduce Canonicalization step (still output string)
-2. Parse Markdown → AST (internal only)
+1. ~~Introduce Canonicalization step (still output string)~~
+2. ~~Parse Markdown → AST (internal only)~~
 3. Implement ReadingModePolicy (default = current behavior)
 4. Convert current TTS call to operate on Utterances
 5. Add Normal Mode
@@ -353,6 +353,44 @@ Those can be added later via new CaptureProfiles or extended Normalization layer
 7. Refine Word Mode alignment using token index
 
 No need to rewrite everything at once.
+
+---
+
+# Progress
+
+## Completed
+
+### Solution restructure
+Moved to `src/` + `tests/` layout. New `SteadyVoice.Core` class library holds platform-agnostic code. `SteadyVoice.Core.Tests` xUnit project covers it (89 tests).
+
+### AST layer (§3)
+Canonical AST defined in `SteadyVoice.Core/Ast/`: `DocumentNode`, `HeadingNode`, `ParagraphNode`, `ListNode`, `ListItemNode`, `QuoteBlockNode`, `CodeBlockNode`, `ThematicBreakNode`, `TextNode`. Half-open `Span` tracks source positions into the canonical Markdown string.
+
+### Markdown parser (§2–3)
+Markdig-backed `MarkdownParser` converts Markdown to the AST. Emphasis/links flattened (text preserved, styling discarded). Unsupported elements silently skipped.
+
+### Token index (§4, partial)
+`Tokenizer` walks `TextNode`s and produces a flat token sequence: Word, Punctuation, Whitespace, Url, Number, Abbreviation. Handles contractions (including smart quotes), hyphenated words, decimal numbers, and common abbreviations (Mr., e.g., etc.).
+
+### App integration
+`ReaderWindow` uses AST-backed paragraph layout and token-level click-to-play. `App.CaptureAndParse()` is the shared entry point — both `PerformTts` and `OpenReaderView` use the same parsed document.
+
+## Still to do
+
+### Canonicalization (§1–2)
+`TextProcessor.Clean()` handles basic normalization but doesn't produce Markdown from structured input. HTML Format clipboard capture could provide richer structure. Currently all captured text is treated as plain text / Markdown.
+
+### Sentence boundaries (§4)
+Token index exists but sentence spans are not yet calculated. Needed for sentence-based synthesis and natural chunk splitting.
+
+### Reading modes (§5)
+No `ReadingModePolicy` yet. Current behavior is effectively a single implicit mode (closest to Word Mode).
+
+### Utterances / speech planning (§6)
+TTS still receives a raw text string. No `Utterance` abstraction or policy-driven segmentation.
+
+### TTS streaming improvements (§7)
+Current NDJSON streaming works. No inter-chunk padding, loudness normalization, or crossfade.
 
 ---
 
