@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using SteadyVoice.Services;
+using SteadyVoice.Core.Ast;
 using System.Text;
 
 namespace SteadyVoice;
@@ -23,9 +24,9 @@ public partial class ReaderWindow : Window {
     private bool _hasBeenActivated;
     private bool _isClosing;
 
-    // Highlighting support
+    // AST-backed word data
     private readonly List<Run> _wordRuns = [];
-    private readonly List<int> _wordStartIndices = [];
+    private readonly List<Token> _wordTokens = [];
     private List<WordTimestamp>? _timestamps;
     private Func<double>? _getPlaybackPosition;
     private DispatcherTimer? _highlightTimer;
@@ -75,35 +76,51 @@ public partial class ReaderWindow : Window {
         StopHighlighting();
         _currentText = text;
         _wordRuns.Clear();
-        _wordStartIndices.Clear();
+        _wordTokens.Clear();
         ClearSelectionHighlight();
         _selectedWordIndex = -1;
         Document.Blocks.Clear();
 
-        var searchIndex = 0;
+        // Parse text into AST and tokenize
+        var doc = MarkdownParser.Parse(text);
+        var allTokens = Tokenizer.Tokenize(doc);
 
-        // Split into paragraphs
-        var paragraphs = text.Split(separator, StringSplitOptions.RemoveEmptyEntries);
-        foreach (var para in paragraphs) {
+        // Group tokens by their containing block node for paragraph layout
+        foreach (var blockNode in doc.Children) {
             var paragraph = new Paragraph { Margin = new Thickness(0, 0, 0, ParagraphSpacing) };
-            var words = para.Replace("\n", " ").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var blockTokens = allTokens.Where(t => blockNode.SourceSpan.Contains(t.SourceSpan)).ToList();
+            var needsSpace = false;
 
-            for (var i = 0; i < words.Length; i++) {
-                var run = new Run(words[i]);
-                run.Tag = _wordRuns.Count;
-                run.Cursor = Cursors.Hand;
-                run.MouseDown += OnWordClicked;
-                _wordRuns.Add(run);
-                _wordStartIndices.Add(FindNextWordIndex(words[i], ref searchIndex));
-                paragraph.Inlines.Add(run);
+            foreach (var token in blockTokens) {
+                if (token.Kind == TokenKind.Whitespace) {
+                    needsSpace = true;
+                    continue;
+                }
 
-                // Add space between words (except last)
-                if (i < words.Length - 1) {
-                    paragraph.Inlines.Add(new Run(" "));
+                if (token.Kind == TokenKind.Word || token.Kind == TokenKind.Number
+                    || token.Kind == TokenKind.Url || token.Kind == TokenKind.Abbreviation) {
+                    if (needsSpace) {
+                        paragraph.Inlines.Add(new Run(" "));
+                        needsSpace = false;
+                    }
+
+                    var run = new Run(token.Text);
+                    run.Tag = _wordRuns.Count;
+                    run.Cursor = Cursors.Hand;
+                    run.MouseDown += OnWordClicked;
+                    _wordRuns.Add(run);
+                    _wordTokens.Add(token);
+                    paragraph.Inlines.Add(run);
+                } else {
+                    // Punctuation: append inline without making it a clickable word run
+                    paragraph.Inlines.Add(new Run(token.Text));
+                    needsSpace = false;
                 }
             }
 
-            Document.Blocks.Add(paragraph);
+            if (paragraph.Inlines.Count > 0) {
+                Document.Blocks.Add(paragraph);
+            }
         }
 
         ApplyFontSettings();
@@ -120,7 +137,7 @@ public partial class ReaderWindow : Window {
         _currentHighlightIndex = -1;
         ClearSelectionHighlight();
         _selectedWordIndex = -1;
-        _timestampRunMap = BuildTimestampRunMap(timestamps, _wordRuns, startWordIndex);
+        _timestampRunMap = BuildTimestampRunMap(timestamps, _wordTokens, startWordIndex);
 
         _highlightTimer = new DispatcherTimer {
             Interval = TimeSpan.FromMilliseconds(HighlightIntervalMs)
@@ -137,8 +154,6 @@ public partial class ReaderWindow : Window {
         _timestampRunMap = null;
         ClearHighlight();
     }
-
-    private static readonly string[] separator = new[] { "\n\n" };
 
     private void OnHighlightTick(object? sender, EventArgs e) {
         if (_timestamps == null || _getPlaybackPosition == null || _wordRuns.Count == 0) {
@@ -282,11 +297,11 @@ public partial class ReaderWindow : Window {
     }
 
     private string GetTextFromWordIndex(int wordIndex) {
-        if (wordIndex < 0 || wordIndex >= _wordStartIndices.Count) {
+        if (wordIndex < 0 || wordIndex >= _wordTokens.Count) {
             return _currentText;
         }
 
-        var startIndex = _wordStartIndices[wordIndex];
+        var startIndex = _wordTokens[wordIndex].SourceSpan.Start;
         if (startIndex < 0 || startIndex >= _currentText.Length) {
             return _currentText;
         }
@@ -294,23 +309,10 @@ public partial class ReaderWindow : Window {
         return _currentText[startIndex..];
     }
 
-    private int FindNextWordIndex(string word, ref int searchIndex) {
-        if (string.IsNullOrEmpty(word) || string.IsNullOrEmpty(_currentText)) {
-            return -1;
-        }
-
-        var foundIndex = _currentText.IndexOf(word, searchIndex, StringComparison.Ordinal);
-        if (foundIndex >= 0) {
-            searchIndex = foundIndex + word.Length;
-        }
-
-        return foundIndex;
-    }
-
-    // Greedy, forward-only token alignment between timestamps and visible runs.
-    private static List<int> BuildTimestampRunMap(List<WordTimestamp> timestamps, List<Run> runs, int startWordIndex) {
+    // Greedy, forward-only token alignment between timestamps and word tokens.
+    private static List<int> BuildTimestampRunMap(List<WordTimestamp> timestamps, List<Token> tokens, int startWordIndex) {
         var map = new List<int>(timestamps.Count);
-        var runIndex = Math.Clamp(startWordIndex, 0, runs.Count);
+        var tokenIndex = Math.Clamp(startWordIndex, 0, tokens.Count);
 
         for (var i = 0; i < timestamps.Count; i++) {
             var tsNorm = NormalizeToken(timestamps[i].Word);
@@ -320,14 +322,14 @@ public partial class ReaderWindow : Window {
             }
 
             var matched = -1;
-            while (runIndex < runs.Count) {
-                var runNorm = NormalizeToken(runs[runIndex].Text);
-                if (!string.IsNullOrEmpty(runNorm) && runNorm == tsNorm) {
-                    matched = runIndex;
-                    runIndex++;
+            while (tokenIndex < tokens.Count) {
+                var tokNorm = NormalizeToken(tokens[tokenIndex].Text);
+                if (!string.IsNullOrEmpty(tokNorm) && tokNorm == tsNorm) {
+                    matched = tokenIndex;
+                    tokenIndex++;
                     break;
                 }
-                runIndex++;
+                tokenIndex++;
             }
 
             map.Add(matched);
