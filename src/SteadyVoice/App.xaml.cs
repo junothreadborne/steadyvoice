@@ -1,5 +1,6 @@
 using System.Windows;
 using Hardcodet.Wpf.TaskbarNotification;
+using SteadyVoice.Core.Ast;
 using SteadyVoice.Services;
 
 namespace SteadyVoice;
@@ -12,7 +13,9 @@ public partial class App : Application {
     private AppSettings _settings = new();
     private CancellationTokenSource? _ttsCts;
 
-    // Reader View state
+    // Shared parsed document state
+    private DocumentNode? _currentDoc;
+    private List<Token>? _currentTokens;
     private ReaderWindow? _readerWindow;
 
     protected override void OnStartup(StartupEventArgs e) {
@@ -101,6 +104,19 @@ public partial class App : Application {
         }
     }
 
+    private (string CleanedText, DocumentNode Doc, List<Token> Tokens)? CaptureAndParse() {
+        var text = TextCaptureService.CaptureSelectedText();
+        if (string.IsNullOrWhiteSpace(text)) {
+            _trayIcon?.ShowBalloonTip("SteadyVoice", "No text selected", BalloonIcon.Warning);
+            return null;
+        }
+
+        var cleanedText = TextProcessor.Clean(text);
+        _currentDoc = MarkdownParser.Parse(cleanedText);
+        _currentTokens = Tokenizer.Tokenize(_currentDoc);
+        return (cleanedText, _currentDoc, _currentTokens);
+    }
+
     private async void OnHotkeyPressed() {
         // If audio is playing, stop it regardless of double-press
         if (_audioPlayer?.IsPlaying == true) {
@@ -126,15 +142,14 @@ public partial class App : Application {
         var ct = _ttsCts.Token;
 
         try {
-            var text = TextCaptureService.CaptureSelectedText();
-            if (string.IsNullOrWhiteSpace(text)) {
-                _trayIcon?.ShowBalloonTip("SteadyVoice", "No text selected", BalloonIcon.Warning);
+            var parsed = CaptureAndParse();
+            if (parsed == null) {
                 return;
             }
 
             _trayIcon!.ToolTipText = "SteadyVoice - Generating...";
             CursorIndicator.ShowBusy();
-            var audioData = await _ttsService!.SynthesizeAsync(text, ct);
+            var audioData = await _ttsService!.SynthesizeAsync(parsed.Value.CleanedText, ct);
             CursorIndicator.Restore();
             _audioPlayer!.Play(audioData);
             _trayIcon.ToolTipText = "SteadyVoice - Ready (Ctrl+Shift+R)";
@@ -149,24 +164,23 @@ public partial class App : Application {
 
     private void OpenReaderView() {
         Log.Debug("OpenReaderView called");
-        var text = TextCaptureService.CaptureSelectedText();
-        if (string.IsNullOrWhiteSpace(text)) {
+        var parsed = CaptureAndParse();
+        if (parsed == null) {
             Log.Info("No text selected for reader");
-            _trayIcon?.ShowBalloonTip("SteadyVoice", "No text selected", BalloonIcon.Warning);
             return;
         }
 
-        Log.Debug($"Reader text captured: {text.Length} chars");
-        var cleanedText = TextProcessor.Clean(text);
+        var (cleanedText, doc, tokens) = parsed.Value;
+        Log.Debug($"Reader text captured: {cleanedText.Length} chars");
 
         // Reuse or create window
         if (_readerWindow is { IsLoaded: true }) {
             Log.Debug("Reusing existing reader window");
-            _readerWindow.UpdateText(cleanedText);
+            _readerWindow.UpdateContent(cleanedText, doc, tokens);
             _readerWindow.Activate();
         } else {
             Log.Debug("Creating new reader window");
-            _readerWindow = new ReaderWindow(cleanedText, _settings, OnReaderPlayRequested, OnReaderClosed);
+            _readerWindow = new ReaderWindow(cleanedText, doc, tokens, _settings, OnReaderPlayRequested, OnReaderClosed);
             _readerWindow.Show();
             Log.Debug("Reader window shown");
         }

@@ -5,18 +5,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Run
 
 ```bash
-dotnet run --project SteadyVoice          # Build and run (Debug)
-dotnet build SteadyVoice                  # Build only (Debug)
-dotnet build SteadyVoice -c Release       # Build (Release)
+dotnet run --project src/SteadyVoice          # Build and run (Debug)
+dotnet build                                  # Build entire solution
+dotnet build src/SteadyVoice -c Release       # Build app (Release)
+dotnet test                                   # Run all tests
+dotnet test tests/SteadyVoice.Core.Tests      # Run core tests only
 ```
 
 Requires .NET 10 SDK. A Kokoro TTS API must be running and reachable at the configured API URL (default `http://localhost:8880`).
 
-There is no test suite.
-
 ## What This Is
 
 SteadyVoice is a Windows-only WPF system tray app that reads highlighted text aloud using Kokoro TTS. User highlights text anywhere, presses Ctrl+Shift+R, and the app captures the text, sends it to a Kokoro API at a configurable URL, and plays back the audio with optional word-by-word highlighting in a reader window.
+
+## Project Structure
+
+```
+src/
+  SteadyVoice/              # WPF app (Windows-only, system tray)
+  SteadyVoice.Core/         # Platform-agnostic core library
+    Ast/                     # Canonical document AST (Markdown-based)
+tests/
+  SteadyVoice.Core.Tests/   # xUnit tests for Core
+```
+
+`SteadyVoice.Core` contains the document model and Markdown parser (via Markdig). The WPF app references Core. Tests reference Core.
 
 ## Architecture
 
@@ -32,7 +45,7 @@ Hotkey (Ctrl+Shift+R)
   → ReaderWindow (word-by-word highlighting synced via timestamps)
 ```
 
-**Services** (`SteadyVoice/Services/`):
+**Services** (`src/SteadyVoice/Services/`):
 - **AppSettings** — JSON persistence of `settings.json` next to executable, defaults on missing/corrupt; includes configurable `ApiUrl`
 - **HotkeyService** — Global hotkey via P/Invoke to `user32.dll`
 - **TextCaptureService** — Tier 1: UI Automation (non-destructive), Tier 2: simulated Ctrl+C with modifier release polling
@@ -57,5 +70,6 @@ Hotkey (Ctrl+Shift+R)
 
 ## Dependencies
 
-- `Hardcodet.NotifyIcon.Wpf` v2.0.1 — System tray icon
-- `NAudio` v2.2.1 — Audio playback
+- `Hardcodet.NotifyIcon.Wpf` v2.0.1 — System tray icon (SteadyVoice)
+- `NAudio` v2.2.1 — Audio playback (SteadyVoice)
+- `Markdig` v0.45.0 — Markdown parsing to AST (SteadyVoice.Core)
