@@ -36,7 +36,7 @@ public partial class ReaderWindow : Window {
     private SolidColorBrush? _selectionBrush;
     private List<int>? _timestampRunMap;
 
-    public ReaderWindow(string text, AppSettings settings, Action<string, int>? onPlayRequested = null, Action? onClosed = null) {
+    public ReaderWindow(string text, DocumentNode doc, List<Token> tokens, AppSettings settings, Action<string, int>? onPlayRequested = null, Action? onClosed = null) {
         InitializeComponent();
         _settings = settings;
         _onPlayRequested = onPlayRequested;
@@ -44,7 +44,7 @@ public partial class ReaderWindow : Window {
         _fontSize = settings.ReaderFontSize;
 
         ApplyTheme();
-        UpdateText(text);
+        UpdateContent(text, doc, tokens);
 
         Activated += OnActivated;
         Deactivated += OnDeactivated;
@@ -72,7 +72,7 @@ public partial class ReaderWindow : Window {
         }
     }
 
-    public void UpdateText(string text) {
+    public void UpdateContent(string text, DocumentNode doc, List<Token> allTokens) {
         StopHighlighting();
         _currentText = text;
         _wordRuns.Clear();
@@ -80,10 +80,6 @@ public partial class ReaderWindow : Window {
         ClearSelectionHighlight();
         _selectedWordIndex = -1;
         Document.Blocks.Clear();
-
-        // Parse text into AST and tokenize
-        var doc = MarkdownParser.Parse(text);
-        var allTokens = Tokenizer.Tokenize(doc);
 
         // Group tokens by their containing block node for paragraph layout
         foreach (var blockNode in doc.Children) {
