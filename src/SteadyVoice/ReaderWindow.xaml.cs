@@ -35,6 +35,7 @@ public partial class ReaderWindow : Window {
     private SolidColorBrush? _highlightBrush;
     private SolidColorBrush? _selectionBrush;
     private List<int>? _timestampRunMap;
+    private int _nextTokenIndex; // for incremental timestamp mapping
 
     public ReaderWindow(string text, DocumentNode doc, List<Token> tokens, AppSettings settings, Action<string, int>? onPlayRequested = null, Action? onClosed = null) {
         InitializeComponent();
@@ -133,8 +134,44 @@ public partial class ReaderWindow : Window {
         _currentHighlightIndex = -1;
         ClearSelectionHighlight();
         _selectedWordIndex = -1;
-        _timestampRunMap = BuildTimestampRunMap(timestamps, _wordTokens, startWordIndex);
+        var (map, nextIdx) = BuildTimestampRunMap(timestamps, _wordTokens, startWordIndex);
+        _timestampRunMap = map;
+        _nextTokenIndex = nextIdx;
 
+        StartHighlightTimer();
+    }
+
+    /// <summary>
+    /// Initialize streaming highlight mode. Timer starts immediately but no
+    /// timestamps are available yet — call AppendTimestamps as chunks arrive.
+    /// </summary>
+    public void StartStreamingHighlight(Func<double> getPlaybackPosition, int startWordIndex) {
+        StopHighlighting();
+        _timestamps = [];
+        _timestampRunMap = [];
+        _nextTokenIndex = Math.Clamp(startWordIndex, 0, _wordTokens.Count);
+        _getPlaybackPosition = getPlaybackPosition;
+        _currentHighlightIndex = -1;
+        ClearSelectionHighlight();
+        _selectedWordIndex = -1;
+
+        StartHighlightTimer();
+    }
+
+    /// <summary>
+    /// Append timestamps from a newly arrived chunk. Extends the timestamp-to-run
+    /// map incrementally, continuing from where the previous chunk left off.
+    /// </summary>
+    public void AppendTimestamps(List<WordTimestamp> newTimestamps) {
+        if (_timestamps == null || _timestampRunMap == null) return;
+
+        _timestamps.AddRange(newTimestamps);
+        var (map, nextIdx) = BuildTimestampRunMap(newTimestamps, _wordTokens, _nextTokenIndex);
+        _timestampRunMap.AddRange(map);
+        _nextTokenIndex = nextIdx;
+    }
+
+    private void StartHighlightTimer() {
         _highlightTimer = new DispatcherTimer {
             Interval = TimeSpan.FromMilliseconds(HighlightIntervalMs)
         };
@@ -306,7 +343,8 @@ public partial class ReaderWindow : Window {
     }
 
     // Greedy, forward-only token alignment between timestamps and word tokens.
-    private static List<int> BuildTimestampRunMap(List<WordTimestamp> timestamps, List<Token> tokens, int startWordIndex) {
+    // Returns the map and the final token index so mapping can be resumed for subsequent chunks.
+    private static (List<int> Map, int NextTokenIndex) BuildTimestampRunMap(List<WordTimestamp> timestamps, List<Token> tokens, int startWordIndex) {
         var map = new List<int>(timestamps.Count);
         var tokenIndex = Math.Clamp(startWordIndex, 0, tokens.Count);
 
@@ -331,7 +369,7 @@ public partial class ReaderWindow : Window {
             map.Add(matched);
         }
 
-        return map;
+        return (map, tokenIndex);
     }
 
     private static string NormalizeToken(string token) {

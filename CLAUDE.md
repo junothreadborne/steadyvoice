@@ -24,7 +24,7 @@ SteadyVoice is a Windows-only WPF system tray app that reads highlighted text al
 src/
   SteadyVoice/              # WPF app (Windows-only, system tray)
   SteadyVoice.Core/         # Platform-agnostic core library
-    Ast/                     # Canonical document AST (Markdown-based)
+    Ast/                     # Canonical document AST, tokenizer, and chunker
 tests/
   SteadyVoice.Core.Tests/   # xUnit tests for Core
 ```
@@ -40,9 +40,14 @@ tests/
 Hotkey (Ctrl+Shift+R)
   → TextCaptureService (UI Automation, clipboard fallback)
   → TextProcessor.Clean()
-  → TtsService → HTTP POST to Kokoro API (localhost:8880/dev/captioned_speech)
-  → AudioPlayerService (NAudio MP3 playback)
-  → ReaderWindow (word-by-word highlighting synced via timestamps)
+  → MarkdownParser.Parse() → DocumentNode AST
+  → Tokenizer.Tokenize() → flat token list
+  → AstChunker.Chunk() → split into ~200-word chunks at block boundaries
+  → For each chunk:
+      → TtsService → HTTP POST to Kokoro API (localhost:8880/dev/captioned_speech)
+      → AudioPlayerService.AddChunkAsync() (decode MP3→PCM, stream into BufferedWaveProvider)
+      → ReaderWindow.AppendTimestamps() (incremental highlight mapping)
+  → AudioPlayerService.FinishStreaming()
 ```
 
 **Services** (`src/SteadyVoice/Services/`):
@@ -50,21 +55,22 @@ Hotkey (Ctrl+Shift+R)
 - **HotkeyService** — Global hotkey via P/Invoke to `user32.dll`
 - **TextCaptureService** — Tier 1: UI Automation (non-destructive), Tier 2: simulated Ctrl+C with modifier release polling
 - **TextProcessor** — Encoding normalization, spacing, punctuation cleanup
-- **TtsService** — HTTP client to Kokoro; returns NDJSON stream with audio chunks + word timestamps
-- **AudioPlayerService** — NAudio `WaveOutEvent` playback with latency-compensated position tracking
+- **TtsService** — HTTP client to Kokoro; returns NDJSON stream with audio chunks + word timestamps; called per-chunk during streaming
+- **AudioPlayerService** — Two modes: classic single-shot `Play(byte[])` and streaming `AddChunkAsync()`/`FinishStreaming()`. Streaming mode decodes MP3 chunks to PCM and feeds a `BufferedWaveProvider` for gapless playback with backpressure (waits for buffer space). Position tracked via `WaveOutEvent.GetPosition()`
 - **Log** — Static, thread-safe file logger with 5MB rotation and real-time subscription for LogWindow
 - **CursorIndicator** — Shows hourglass cursor during TTS generation
 
 **Windows** (WPF):
-- **ReaderWindow** — Styled text with click-to-play-from-word; maintains parallel `_wordRuns`/`_wordStartIndices` lists for word-level indexing; light/dark theming via Window.Resources
+- **ReaderWindow** — Styled text with click-to-play-from-word; maintains parallel `_wordRuns`/`_wordTokens` lists for word-level indexing; supports incremental timestamp appending via `StartStreamingHighlight()`/`AppendTimestamps()` with resumable `BuildTimestampRunMap`; light/dark theming via Window.Resources
 - **SettingsWindow** — Dialog for API URL, voice, reader prefs, log level; returns `DialogResult`
 - **LogWindow** — Real-time log viewer, singleton pattern
 
 ## Key Patterns
 
-- **Async/CancellationToken throughout** — TTS operations are cancellable; pressing hotkey during playback stops it
-- **NDJSON streaming** — Kokoro API returns newline-delimited JSON objects with audio chunks and `WordTimestamp` data; audio chunks are concatenated, timestamps collected for synchronized highlighting
-- **Timestamp alignment** — Greedy forward-only token matching between API timestamps and displayed words; adjustable timescale compensates for audio latency (120ms default device latency)
+- **Chunked TTS streaming** — `AstChunker` (in Core) splits text at top-level AST block boundaries (paragraphs, headings, lists) targeting ~200 words per chunk. Chunks are sent to the TTS API sequentially; audio playback starts after the first chunk returns. `AudioPlayerService` streams decoded PCM into a `BufferedWaveProvider` with backpressure. Timestamps are offset by cumulative chunk duration and appended incrementally to `ReaderWindow`
+- **Async/CancellationToken throughout** — TTS operations are cancellable; pressing hotkey during playback cancels in-flight requests and stops streaming
+- **NDJSON streaming** — Kokoro API returns newline-delimited JSON objects with audio chunks and `WordTimestamp` data; audio chunks are concatenated per-request, timestamps collected for synchronized highlighting
+- **Timestamp alignment** — Greedy forward-only token matching between API timestamps and displayed words; `BuildTimestampRunMap` returns next token index so mapping resumes correctly across chunk boundaries; 120ms default device latency offset
 - **P/Invoke** — Used for hotkey registration, clipboard simulation, and cursor management
 - **Settings hot-reload** — No restart needed; new `TtsService` instance created after settings save
 
