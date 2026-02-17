@@ -5,7 +5,7 @@ using SteadyVoice.Services;
 
 namespace SteadyVoice;
 
-public partial class App : Application {
+public partial class App : Application, IDisposable {
     private TaskbarIcon? _trayIcon;
     private HotkeyService? _hotkeyService;
     private AudioPlayerService? _audioPlayer;
@@ -120,6 +120,7 @@ public partial class App : Application {
     private async void OnHotkeyPressed() {
         // If audio is playing, stop it regardless of double-press
         if (_audioPlayer?.IsPlaying == true) {
+            _ttsCts?.Cancel();
             _audioPlayer.Stop();
             return;
         }
@@ -132,11 +133,11 @@ public partial class App : Application {
         } else {
             // TTS without window
             Log.Debug("Reader window disabled - TTS only");
-            await PerformTts();
+            await PerformChunkedTts();
         }
     }
 
-    private async Task PerformTts() {
+    private async Task PerformChunkedTts() {
         _ttsCts?.Cancel();
         _ttsCts = new CancellationTokenSource();
         var ct = _ttsCts.Token;
@@ -147,16 +148,34 @@ public partial class App : Application {
                 return;
             }
 
+            var (_, doc, tokens) = parsed.Value;
+            var chunks = AstChunker.Chunk(doc, tokens, 100);
+            Log.Debug($"Chunked TTS: {chunks.Count} chunks");
+
             _trayIcon!.ToolTipText = "SteadyVoice - Generating...";
             CursorIndicator.ShowBusy();
-            var audioData = await _ttsService!.SynthesizeAsync(parsed.Value.CleanedText, ct);
-            CursorIndicator.Restore();
-            _audioPlayer!.Play(audioData);
+
+            var firstChunk = true;
+            foreach (var chunk in chunks) {
+                ct.ThrowIfCancellationRequested();
+
+                var result = await _ttsService!.SynthesizeAsync(chunk.Text, ct);
+
+                if (firstChunk) {
+                    CursorIndicator.Restore();
+                    firstChunk = false;
+                }
+
+                await _audioPlayer!.AddChunkAsync(result, ct);
+            }
+
+            _audioPlayer!.FinishStreaming();
             _trayIcon.ToolTipText = "SteadyVoice - Ready (Ctrl+Shift+R)";
         } catch (OperationCanceledException) {
             CursorIndicator.Restore();
         } catch (Exception ex) {
             CursorIndicator.Restore();
+            _audioPlayer?.Stop();
             _trayIcon?.ShowBalloonTip("SteadyVoice", $"TTS error: {ex.Message}", BalloonIcon.Error);
             _trayIcon!.ToolTipText = "SteadyVoice - Ready (Ctrl+Shift+R)";
         }
@@ -189,63 +208,100 @@ public partial class App : Application {
         if (_settings.ReaderAutoPlay) {
             Log.Debug("Auto-playing TTS with highlighting");
             _audioPlayer?.Stop();
-            _ = PerformTtsWithHighlighting(cleanedText, 0);
+            _ = PerformChunkedTtsWithHighlighting(0);
         }
     }
 
     private void OnReaderPlayRequested(string text, int startWordIndex) {
         _audioPlayer?.Stop();
-        _ = PerformTtsWithHighlighting(text, startWordIndex);
+        _ = PerformChunkedTtsWithHighlighting(startWordIndex);
     }
 
-    private void OnReaderClosed() => _audioPlayer?.Stop();
+    private void OnReaderClosed() {
+        _ttsCts?.Cancel();
+        _audioPlayer?.Stop();
+    }
 
     private void OnPlaybackStopped() =>
         // Stop highlighting when playback ends
         _readerWindow?.StopHighlighting();
 
-    private async Task PerformTtsWithHighlighting(string text, int startWordIndex) {
+    private async Task PerformChunkedTtsWithHighlighting(int startWordIndex) {
         _ttsCts?.Cancel();
         _ttsCts = new CancellationTokenSource();
         var ct = _ttsCts.Token;
 
         try {
+            var doc = _currentDoc;
+            var tokens = _currentTokens;
+            if (doc == null || tokens == null)
+                return;
+
+            var chunks = AstChunker.Chunk(doc, tokens);
+            Log.Debug($"Chunked TTS with highlighting: {chunks.Count} chunks, startWord={startWordIndex}");
+
+            // Find the first chunk that contains words at or after startWordIndex
+            var startChunkIdx = 0;
+            for (var i = 0; i < chunks.Count; i++) {
+                if (chunks[i].StartWordIndex + chunks[i].WordCount > startWordIndex) {
+                    startChunkIdx = i;
+                    break;
+                }
+            }
+
             _trayIcon!.ToolTipText = "SteadyVoice - Generating...";
             CursorIndicator.ShowBusy();
 
-            // Get audio with timestamps for highlighting
-            var result = await _ttsService!.SynthesizeWithTimestampsAsync(text, includeTimestamps: true, ct);
-            CursorIndicator.Restore();
+            var firstChunk = true;
+            var latency = _audioPlayer!.OutputLatencySeconds;
 
-            // Start highlighting if we have timestamps and window is open
-            _audioPlayer!.Play(result.Audio);
+            for (var i = startChunkIdx; i < chunks.Count; i++) {
+                ct.ThrowIfCancellationRequested();
 
-            if (result.Timestamps != null && _readerWindow is { IsLoaded: true }) {
-                var latency = _audioPlayer.OutputLatencySeconds;
-                var duration = _audioPlayer.DurationSeconds;
-                var lastTimestamp = result.Timestamps.Count > 0 ? result.Timestamps[^1].EndTime : 0;
-                var timeScale = (duration > 0 && lastTimestamp > 0) ? lastTimestamp / duration : 1.0;
-                if (timeScale < 0.5) {
-                    timeScale = 0.5;
+                var chunk = chunks[i];
+                var result = await _ttsService!.SynthesizeWithTimestampsAsync(chunk.Text, includeTimestamps: true, ct);
+
+                // Get duration offset BEFORE adding this chunk's audio
+                var timeOffset = _audioPlayer.TotalStreamedDurationSeconds;
+
+                // Feed audio to streaming player (waits for buffer space)
+                await _audioPlayer.AddChunkAsync(result.Audio, ct);
+
+                if (firstChunk) {
+                    CursorIndicator.Restore();
+
+                    // Initialize streaming highlight on the reader window
+                    if (_readerWindow is { IsLoaded: true }) {
+                        _readerWindow.StartStreamingHighlight(() => {
+                            var pos = _audioPlayer?.CurrentPositionSeconds ?? 0;
+                            var adjusted = pos - latency;
+                            return adjusted > 0 ? adjusted : 0;
+                        }, startWordIndex);
+                    }
+
+                    firstChunk = false;
                 }
 
-                if (timeScale > 2.0) {
-                    timeScale = 2.0;
-                }
+                // Append offset timestamps for this chunk
+                if (result.Timestamps != null && _readerWindow is { IsLoaded: true }) {
+                    var offsetTimestamps = result.Timestamps
+                        .Select(ts => new WordTimestamp(ts.Word, ts.StartTime + timeOffset, ts.EndTime + timeOffset))
+                        .ToList();
 
-                Log.Debug($"Starting highlighting with {result.Timestamps.Count} timestamps (latency {latency:0.###}s, scale {timeScale:0.###})");
-                _readerWindow.StartHighlighting(result.Timestamps, () => {
-                    var pos = _audioPlayer?.CurrentPositionSeconds ?? 0;
-                    var adjusted = (pos - latency) * timeScale;
-                    return adjusted > 0 ? adjusted : 0;
-                }, startWordIndex);
+                    Log.Debug($"Chunk {i}: {offsetTimestamps.Count} timestamps, offset={timeOffset:0.###}s");
+                    _readerWindow.AppendTimestamps(offsetTimestamps);
+                }
             }
+
+            _audioPlayer.FinishStreaming();
             _trayIcon.ToolTipText = "SteadyVoice - Ready (Ctrl+Shift+R)";
         } catch (OperationCanceledException) {
             CursorIndicator.Restore();
+            _audioPlayer?.Stop();
         } catch (Exception ex) {
             CursorIndicator.Restore();
-            Log.Error("TTS with highlighting failed", ex);
+            _audioPlayer?.Stop();
+            Log.Error("Chunked TTS with highlighting failed", ex);
             _trayIcon?.ShowBalloonTip("SteadyVoice", $"TTS error: {ex.Message}", BalloonIcon.Error);
             _trayIcon!.ToolTipText = "SteadyVoice - Ready (Ctrl+Shift+R)";
         }
@@ -258,5 +314,20 @@ public partial class App : Application {
         _trayIcon?.Dispose();
 
         base.OnExit(e);
+    }
+
+    public void Dispose() {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing) {
+        if (disposing) {
+            _ttsCts?.Cancel();
+            _ttsCts?.Dispose();
+            _audioPlayer?.Dispose();
+            _ttsService?.Dispose();
+            _trayIcon?.Dispose();
+        }
     }
 }
